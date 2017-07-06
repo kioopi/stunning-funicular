@@ -20,23 +20,23 @@ defmodule Demo.AutoPlayer.Server do
   def next_question(round_id, player_id, question) do
     Logger.debug("AutoPlayer received question #{player_id} #{question.text}")
 
-    GenServer.call(round_id, {:next_question, player_id, question})
+    GenServer.cast(round_id, {:next_question, player_id, question})
   end
 
   def wrong_answer(round_id, player_id, solution) do
-    GenServer.call(round_id, {:wrong_answer, player_id, solution})
+    GenServer.cast(round_id, {:wrong_answer, player_id, solution})
   end
 
   def correct_answer(round_id, player_id) do
-    GenServer.call(round_id, {:correct_answer, player_id})
+    GenServer.cast(round_id, {:correct_answer, player_id})
   end
 
   def won(round_id, player_id) do
-    GenServer.call(round_id, {:won, player_id})
+    GenServer.cast(round_id, {:won, player_id})
   end
 
   def lost(round_id, player_id) do
-    GenServer.call(round_id, {:lost, player_id})
+    GenServer.cast(round_id, {:lost, player_id})
   end
 
   def init({round_id, _player_ids}) do
@@ -46,8 +46,7 @@ defmodule Demo.AutoPlayer.Server do
     }}
   end
 
-  def handle_call({:next_question, player_id, question}, from, state) do
-    GenServer.reply(from, :ok) # why is this here?
+  def handle_cast({:next_question, player_id, question}, state) do
     IO.puts("#{player_id}: #{question.text}")
     IO.puts("#{player_id}: thinking...")
     next_answer = AutoPlayer.next_answer(question)
@@ -57,22 +56,22 @@ defmodule Demo.AutoPlayer.Server do
     {:noreply, state}
   end
 
-  def handle_call({:wrong_answer, player_id, correct_idx}, _from, state) do
+  def handle_cast({:wrong_answer, player_id, correct_idx}, state) do
     IO.puts("#{player_id}: got it wrong. Correct answer was ##{correct_idx+1}.")
     {:noreply, state}
   end
 
-  def handle_call({:correct_answer, player_id }, _from, state) do
+  def handle_cast({:correct_answer, player_id }, state) do
     IO.puts("#{player_id}: got it right!")
     {:noreply, state}
   end
 
-  def handle_call({:won, player_id }, _from, state) do
+  def handle_cast({:won, player_id }, state) do
     IO.puts("#{player_id}: won")
     {:noreply, state}
   end
 
-  def handle_call({:lost, player_id }, _from, state) do
+  def handle_cast({:lost, player_id }, state) do
     IO.puts("#{player_id}: lost")
     {:noreply, state}
   end
