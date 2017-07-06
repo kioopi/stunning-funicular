@@ -1,6 +1,13 @@
 defmodule Quiz.PlayerNotifier do
   use GenServer
 
+  @moduledoc """
+  This contains the child spec to run a supervisor to hold the processes
+  based of PlayerNotifier.
+  For every player_id one PlayerNotifier process is created.
+
+  """
+
   alias Quiz.{Round, RoundServer, Question}
 
   require Logger

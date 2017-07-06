@@ -7,6 +7,20 @@ defmodule Quiz.RoundServer do
 
   require Logger
 
+  @moduledoc """
+  This contains the child_spec for a supervisor that gets in the root supervisor.
+  This supervisor holds instances of this module, Quiz.Roundserver.
+  They get started by the function start_playing.
+  So every round has its own RoundServer, which holds the Round in its state.
+
+  When a start_playing is called with a round_id (pid or identifier of roundserver)
+  and two players (tuple describing how to contact module that implents PlayerNotifier behaviour),
+  a new supervisor is started as a child of @rounds_supervisor.
+  This supervisor contains a PlayerNotifier process and a RoundServer process.
+
+  The RoundServer will (in the start_link and init functions that get called automatically)
+  create the state that is used by the functions in the Round module.
+  """
 
   # seems to be just a name given to the supervisor
   # so it doesn't have to be refered to by pid
@@ -18,7 +32,10 @@ defmodule Quiz.RoundServer do
 
   @spec child_spec() :: Supervisor.Spec.spec
 
-  # child spec to be used for the supervisor responsible for starting this module
+  @doc """
+    Returns a child spec to start a supervisor that will be responsible for
+    holding processes based of this module.
+  """
   def child_spec() do
     Supervisor.Spec.supervisor(
       Supervisor,
@@ -30,18 +47,29 @@ defmodule Quiz.RoundServer do
     )
   end
 
+  @doc """
+  Starts a new process of RoundServer in the @rounds_supervisor
+  This will call RoundServer.start_link.
+  """
   @spec start_playing(id, [player]) :: Supervisor.on_start_child
   def start_playing(round_id, players) do
     Supervisor.start_child(@rounds_supervisor, [round_id, players])
   end
 
+  @doc """
+  API function that is used by the players.
+  """
   @spec take_answer(id, Round.player_id, 0..3) :: :ok
   def take_answer(round_id, player_id, answer) do
     GenServer.call(service_name(round_id), {:take_answer, player_id, answer})
   end
 
-  # callback when this module is started as a supervisor
-  @doc false
+  @doc """
+  Callback to call instead of start_link when this module is started
+  as a supervisor.
+
+  So this module cann be started as a supervisor as well as as worker.
+  """
   def start_supervisor(round_id, players) do
     Supervisor.start_link(
       [
