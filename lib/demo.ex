@@ -1,9 +1,9 @@
 defmodule Demo.AutoPlayer.Server do
   use GenServer
 
-  @behaviour Quiz.PlayerNotifier
-
   require Logger
+
+  @behaviour Quiz.PlayerNotifier
 
   alias Demo.AutoPlayer
 
@@ -18,8 +18,6 @@ defmodule Demo.AutoPlayer.Server do
   @doc false
 
   def next_question(round_id, player_id, question) do
-    Logger.debug("AutoPlayer received question #{player_id} #{question.text}")
-
     GenServer.cast(round_id, {:next_question, player_id, question})
   end
 
@@ -50,19 +48,20 @@ defmodule Demo.AutoPlayer.Server do
     IO.puts("#{player_id}: #{question.text}")
     IO.puts("#{player_id}: thinking...")
     next_answer = AutoPlayer.next_answer(question)
-    IO.puts("#{player_id}: answer: #{next_answer}")
+
+    IO.puts("#{player_id}: answer: #{Enum.at(question.options, next_answer)}")
 
     Quiz.RoundServer.take_answer(state.round_id, player_id, next_answer)
-    {:noreply, state}
+    {:noreply, Map.put(state, :question, question)}
   end
 
   def handle_cast({:wrong_answer, player_id, correct_idx}, state) do
-    IO.puts("#{player_id}: got it wrong. Correct answer was ##{correct_idx+1}.")
+    IO.puts("#{player_id} got it wrong. Correct answer was #{Enum.at(state.question.options, correct_idx)}.")
     {:noreply, state}
   end
 
   def handle_cast({:correct_answer, player_id }, state) do
-    IO.puts("#{player_id}: got it right!")
+    IO.puts("#{player_id} got it right!")
     {:noreply, state}
   end
 
@@ -78,10 +77,7 @@ defmodule Demo.AutoPlayer.Server do
 end
 
 defmodule Demo do
-  require Logger
-
   def run do
-    Logger.debug("Demo run")
     start_round(
       :"round_#{:erlang.unique_integer()}",
       ["player_1", "player_2"]

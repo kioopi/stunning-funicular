@@ -6,11 +6,11 @@ defmodule Quiz.PlayerNotifier do
   based of PlayerNotifier.
   For every player_id one PlayerNotifier process is created.
 
+  The api function `publish` decides which PlayerNotifier 
+
   """
 
   alias Quiz.{Round, RoundServer, Question}
-
-  require Logger
 
   @callback next_question(RoundServer.callback_arg, Round.player_id, Question.without_solution) :: any
   @callback wrong_answer(RoundServer.callback_arg, Round.player_id, 0..3) :: any
@@ -19,6 +19,9 @@ defmodule Quiz.PlayerNotifier do
   @callback lost(RoundServer.callback_arg, Round.player_id) :: any
 
   @spec child_spec(RoundServer.id, [RoundServer.player]) :: Supervisor.Spec.spec
+  @doc """
+  Returns a child_spec 
+  """
   def child_spec(round_id, players) do
     import Supervisor.Spec
 
@@ -33,8 +36,6 @@ defmodule Quiz.PlayerNotifier do
 
   @spec publish(RoundServer.id, Round.player_id, Round.player_instruction) :: :ok
   def publish(round_id, player_id, player_instruction) do
-    Logger.debug("PlayerNotifier: publish #{player_id} #{elem(player_instruction, 0)}")
-
     GenServer.cast(service_name(round_id, player_id), {:notify, player_instruction})
   end
 
@@ -54,13 +55,10 @@ defmodule Quiz.PlayerNotifier do
 
   @doc false
   def handle_cast({:notify, player_instruction}, state) do
-    Logger.debug("PlayerNotifier: handle_cast #{state.player.id} #{elem(player_instruction, 0)}")
-
     {fun, args} = decode_instruction(player_instruction)
     all_args = [state.player.callback_arg, state.player.id | args]
     apply(state.player.callback_mod, fun, all_args)
 
-    Logger.debug("PlayerNotifier: handle_cast after apply #{state.player.id} #{elem(player_instruction, 0)}")
     {:noreply, state}
   end
 

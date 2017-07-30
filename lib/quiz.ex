@@ -8,8 +8,8 @@ defmodule Quiz do
 
   ## Examples
 
-      iex> Quiz.hello
-      :world
+      iex> Quiz.service_name(:x)
+      {:via, Registry, {Quiz.Registry, :x }}
 
   """
   def service_name(service_id) do

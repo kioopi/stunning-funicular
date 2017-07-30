@@ -8,8 +8,8 @@ defmodule Quiz.RoundServer do
   require Logger
 
   @moduledoc """
-  This contains the child_spec for a supervisor that gets in the root supervisor.
-  This supervisor holds instances of this module, Quiz.Roundserver.
+  This contains the child_spec for a supervisor that gets started in the root supervisor.
+  This supervisor holds processes based on this module, Quiz.Roundserver.
   They get started by the function start_playing.
   So every round has its own RoundServer, which holds the Round in its state.
 
@@ -100,7 +100,6 @@ defmodule Quiz.RoundServer do
 
   @doc false
   def handle_call({:take_answer, player_id, answer }, _from, state) do
-      Logger.debug("Round server :take_answer #{player_id} #{state.round.current_question.text} #{answer} ")
       newstate = state.round
       |> Round.take_answer(player_id, answer)
       |> handle_round_result(state)
@@ -117,7 +116,6 @@ defmodule Quiz.RoundServer do
   end
 
   defp handle_instruction(state, {:notify_player, player_id, instruction}) do
-    Logger.debug("Send instruction to #{player_id} #{inspect instruction}")
     PlayerNotifier.publish(state.round_id, player_id, instruction)
     state
   end

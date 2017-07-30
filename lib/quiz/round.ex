@@ -33,7 +33,6 @@ defmodule Quiz.Round do
   @spec start([player_id]) :: {[instruction], t}
 
   def start(player_ids) do
-    Logger.debug("Starting round #{inspect player_ids}")
     start(player_ids, random_questions(4))
   end
 
@@ -49,7 +48,6 @@ defmodule Quiz.Round do
   end
 
   def take_answer(round, player_id, answer) do
-    Logger.debug("Receiving answer from #{inspect player_id}")
     round
     |> add_answer(player_id, answer)
     |> answer_instruction(player_id, answer)
@@ -73,7 +71,6 @@ defmodule Quiz.Round do
   end
 
   defp check_question_done(%Round{current_question: %{ answers: answers }} = round) when length(answers) == 2 do
-    Logger.debug("Both players answered question.")
     round
      |> question_done
      |> pop_question
@@ -89,7 +86,6 @@ defmodule Quiz.Round do
   end
 
   defp question_done(%Round{ current_question: current_question, done_questions: done_questions }=round) do
-    Logger.debug("Moving question to done.")
     round
     |> Map.put(:current_question, nil)
     |> Map.put(:done_questions, [current_question|done_questions])
@@ -102,7 +98,6 @@ defmodule Quiz.Round do
 
   # blows up when called with a Round with current_question defined
   defp pop_question(%Round{questions: [question|tail], current_question: nil} = round) do
-    Logger.debug("Getting question from stack.")
     round
     |> Map.put(:current_question, Question.add_answers(question))
     |> Map.put(:questions, tail)
@@ -122,17 +117,12 @@ defmodule Quiz.Round do
   end
 
   defp add_finish_notifications(round, info) do
-
-    IO.puts(inspect info)
-
     round
     |> notify_player(elem(info.winner, 0), { :finish, :won })
     |> notify_player(elem(info.loser, 0), { :finish, :lost })
   end
 
   defp get_winner_loser(data) do
-    IO.puts('----------')
-    IO.puts(inspect data)
     ordered =  List.keysort(data, 1) |> Enum.reverse()
     %{
       winner: List.first(ordered),
@@ -141,8 +131,6 @@ defmodule Quiz.Round do
   end
 
   defp sum_wins(%Round{questions: [], current_question: nil, done_questions: done_questions }) do
-    IO.puts('--------done q')
-    IO.puts(inspect done_questions)
     cb = fn(q, acc) -> sum_wins_question(acc, q.answers, q.solution) end
     Enum.reduce(done_questions, %{}, cb) |> to_keyword_list
   end
