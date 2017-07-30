@@ -1,19 +1,19 @@
 # Quiz
 
-**TODO: Add description**
+This is the code from Saša Jurić's article "To spawn, or not to spawn?" adapted
+to run a simple quiz.
 
-## Installation
+http://theerlangelist.com/article/spawn_or_not
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `quiz` to your list of dependencies in `mix.exs`:
+The intention here is mostly to play with the code to learn the concepts of Elixir/OTP.
 
-```elixir
-def deps do
-  [{:quiz, "~> 0.1.0"}]
-end
-```
+## Run the code.
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/quiz](https://hexdocs.pm/quiz).
+ * Clone the repo
+ * Start iex
 
+   iex -S mix
+
+ * Start the demo
+
+   Demo.run()

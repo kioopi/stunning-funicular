@@ -2,12 +2,9 @@ defmodule Quiz.PlayerNotifier do
   use GenServer
 
   @moduledoc """
-  This contains the child spec to run a supervisor to hold the processes
-  based of PlayerNotifier.
-  For every player_id one PlayerNotifier process is created.
-
-  The api function `publish` decides which PlayerNotifier 
-
+  Recieves notifictions for players through the `publish` api function.
+  Every player comes with a callback module that must implement the
+  behaviour definded by this module (PlayerNotifier).
   """
 
   alias Quiz.{Round, RoundServer, Question}
@@ -18,26 +15,17 @@ defmodule Quiz.PlayerNotifier do
   @callback won(RoundServer.callback_arg, Round.player_id) :: any
   @callback lost(RoundServer.callback_arg, Round.player_id) :: any
 
-  @spec child_spec(RoundServer.id, [RoundServer.player]) :: Supervisor.Spec.spec
+  @spec child_spec(RoundServer.id, RoundServer.player) :: Supervisor.Spec.spec
   @doc """
-  Returns a child_spec 
+  Returns a child_spec to start this module as a worker in a supervisor
   """
-  def child_spec(round_id, players) do
+  def child_spec(round_id, player) do
     import Supervisor.Spec
 
-    supervisor(
-      Supervisor,
-      [
-        Enum.map(players, &worker(__MODULE__, [round_id, &1], [id: {__MODULE__, &1.id}])),
-        [strategy: :one_for_one]
-      ]
-    )
+     worker(__MODULE__, [round_id, player], [id: {__MODULE__, player.id}])
   end
 
-  @spec publish(RoundServer.id, Round.player_id, Round.player_instruction) :: :ok
-  def publish(round_id, player_id, player_instruction) do
-    GenServer.cast(service_name(round_id, player_id), {:notify, player_instruction})
-  end
+  ### API
 
   @doc false
   def start_link(round_id, player) do
@@ -47,6 +35,16 @@ defmodule Quiz.PlayerNotifier do
       name: service_name(round_id, player.id)
     )
   end
+
+  @doc """
+  Sends instruction to the PlayerNotifier Process identified by round_id and player_id
+  """
+  @spec publish(RoundServer.id, Round.player_id, Round.player_instruction) :: :ok
+  def publish(round_id, player_id, player_instruction) do
+    GenServer.cast(service_name(round_id, player_id), {:notify, player_instruction})
+  end
+
+  ### CALLBACKS
 
   @doc false
   def init({round_id, player}) do
@@ -61,6 +59,8 @@ defmodule Quiz.PlayerNotifier do
 
     {:noreply, state}
   end
+
+  ### Privates
 
   defp service_name(round_id, player_id) do
     Quiz.service_name({__MODULE__, round_id, player_id})

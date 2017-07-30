@@ -11,7 +11,7 @@ defmodule Quiz.Application do
     # Define workers and child supervisors to be supervised
     children = [
       supervisor(Registry, [:unique, Quiz.Registry]),
-      Quiz.RoundServer.child_spec()
+      Quiz.RoundsSupervisor.child_spec()
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html

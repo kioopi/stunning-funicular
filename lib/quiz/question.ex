@@ -1,6 +1,17 @@
 defmodule Quiz.Question do
   defstruct [:text, :options, :solution]
 
+
+  @moduledoc """
+  Represents a single question. Text, an array of possible answers (options)
+  and the index of the correct option (0..3).
+
+  There are different variants of a question:
+   Quiz.Question.t -> has all info.
+   Quiz.Question.without_solution -> does not contain info about which option is correct.  This is sent to the players.
+   Quiz.Question.with_answers -> contains an array with the guesses of the players:  {player_id, index}
+  """
+
   @type t :: %Quiz.Question{
     text: String.t,
     options: [String.t],

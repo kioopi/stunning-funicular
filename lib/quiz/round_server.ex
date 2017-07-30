@@ -1,86 +1,39 @@
 defmodule Quiz.RoundServer do
   use GenServer
 
-  import Supervisor.Spec # functions to define how to run a supervisor
   alias Quiz.Round
   alias Quiz.PlayerNotifier
 
   require Logger
 
   @moduledoc """
-  This contains the child_spec for a supervisor that gets started in the root supervisor.
-  This supervisor holds processes based on this module, Quiz.Roundserver.
-  They get started by the function start_playing.
-  So every round has its own RoundServer, which holds the Round in its state.
 
-  When a start_playing is called with a round_id (pid or identifier of roundserver)
-  and two players (tuple describing how to contact module that implents PlayerNotifier behaviour),
-  a new supervisor is started as a child of @rounds_supervisor.
-  This supervisor contains a PlayerNotifier process and a RoundServer process.
+  GenServer managing a single round.
 
-  The RoundServer will (in the start_link and init functions that get called automatically)
-  create the state that is used by the functions in the Round module.
+  Creates the state for a new round using the `Round` module when it is started (init/1).
+  The functions in round (start/1 and take_answer/2) return a list of instructions
+  for the players. RoundServer uses PlayerNotifier to pass the instructions to the
+  player-processes, which in turn use the API of round server to answer (take_answer/3).
   """
-
-  # seems to be just a name given to the supervisor
-  # so it doesn't have to be refered to by pid
-  @rounds_supervisor Quiz.RoundSup
 
   @type id :: any
   @type player :: %{id: Round.player_id, callback_mod: module, callback_arg: callback_arg}
   @type callback_arg :: any
 
-  @spec child_spec() :: Supervisor.Spec.spec
+  ### API FUNCTIONS ###
 
-  @doc """
-    Returns a child spec to start a supervisor that will be responsible for
-    holding processes based of this module.
-  """
-  def child_spec() do
-    Supervisor.Spec.supervisor(
-      Supervisor,
-      [
-        [Supervisor.Spec.supervisor(__MODULE__, [], function: :start_supervisor)],
-        [strategy: :simple_one_for_one, name: @rounds_supervisor]
-      ],
-      id: @rounds_supervisor
-    )
-  end
-
-  @doc """
-  Starts a new process of RoundServer in the @rounds_supervisor
-  This will call RoundServer.start_link.
-  """
-  @spec start_playing(id, [player]) :: Supervisor.on_start_child
-  def start_playing(round_id, players) do
-    Supervisor.start_child(@rounds_supervisor, [round_id, players])
-  end
-
-  @doc """
-  API function that is used by the players.
-  """
   @spec take_answer(id, Round.player_id, 0..3) :: :ok
+  @doc """
+  API function that is used by the players (modules that implement the behaviour defined
+  in PlayerNotifier).
+
+  Receives an answer to the current question.
+  """
   def take_answer(round_id, player_id, answer) do
     GenServer.call(service_name(round_id), {:take_answer, player_id, answer})
   end
 
-  @doc """
-  Callback to call instead of start_link when this module is started
-  as a supervisor.
-
-  So this module cann be started as a supervisor as well as as worker.
-  """
-  def start_supervisor(round_id, players) do
-    Supervisor.start_link(
-      [
-        PlayerNotifier.child_spec(round_id, players),
-        worker(__MODULE__, [round_id, players])
-      ],
-      strategy: :one_for_all
-    )
-  end
-
-  @doc false
+  @doc ""
   def start_link(round_id, players) do
     GenServer.start_link(
       __MODULE__,
@@ -88,6 +41,8 @@ defmodule Quiz.RoundServer do
       name: service_name(round_id)
     )
   end
+
+  ### CALLBACKS
 
   @doc false
   def init({round_id, player_ids}) do
@@ -107,6 +62,10 @@ defmodule Quiz.RoundServer do
     {:reply, :ok, newstate }
   end
 
+  ### Privates
+
+
+  @doc "Returns a tuple to identify a round in the Quiz.Registry"
   defp service_name(round_id) do
     Quiz.service_name({__MODULE__, round_id})
   end

@@ -3,6 +3,17 @@ defmodule Quiz.Round do
     :questions, :players, :done_questions, :current_question, :instructions
   ]
 
+  @moduledoc """
+  Contains functions to handle the state of a round.
+  This state happens to be in the shape of the struct defined above.
+
+  `start/1 or 2` creates the state for a round that is stored in RoundServer.
+  This state includes a list of instructions that notifies the players about
+  in the state of the round.
+
+  `take_answer/3` updates a round/instructions according to a guess by a player.
+  """
+
   require Logger
 
   alias Quiz.Question
@@ -32,10 +43,15 @@ defmodule Quiz.Round do
 
   @spec start([player_id]) :: {[instruction], t}
 
+  ### PUBLIC
+
   def start(player_ids) do
     start(player_ids, random_questions(4))
   end
 
+  @doc """
+  Creates the inital state for a round and the first list of player instructions.
+  """
   def start(player_ids, questions) do
     %Round{
       questions: questions,
@@ -55,11 +71,15 @@ defmodule Quiz.Round do
     |> instructions_and_state
   end
 
+  ### PRIVATES
+
+  # @doc "Just logs an answer."
   defp add_answer(%Round{current_question: %{ answers: answers }} = round, player_id, answer) do
     # TODO check if player has already answered and fail
     %Round{round|current_question: %{round.current_question|answers: [{player_id, answer}|answers]}}
   end
 
+  # @doc "Creates a notification informing the player whether `answer` was correct adding the correct answer if it wasn't"
   defp answer_instruction(%Round{ current_question: %{ solution: solution }} = round, player_id, answer) when solution == answer do
     round |> notify_player(player_id, {:correct_answer})
     # TODO notify other player about this
@@ -70,13 +90,16 @@ defmodule Quiz.Round do
     # TODO notify other player about this
   end
 
-  defp check_question_done(%Round{current_question: %{ answers: answers }} = round) when length(answers) == 2 do
+  defp check_question_done(%Round{current_question: %{ answers: answers }, players: players} = round) when length(answers) == length(players) do
+    Logger.debug("Question so done ------")
     round
      |> question_done
      |> pop_question
   end
 
   defp check_question_done(round) do
+    Logger.debug("Question not done")
+    Logger.debug(inspect round.current_question.answers)
     round
   end
 
@@ -92,11 +115,11 @@ defmodule Quiz.Round do
   end
 
   defp instructions_and_state(round) do
-    round
-    |> take_instructions
+    {Enum.reverse(round.instructions), %Round{round | instructions: []}}
   end
 
-  # blows up when called with a Round with current_question defined
+  # Moves a question from the backlog (questions) to the current_question slot.
+  # Will blow up when called with a Round with current_question defined.
   defp pop_question(%Round{questions: [question|tail], current_question: nil} = round) do
     round
     |> Map.put(:current_question, Question.add_answers(question))
@@ -104,6 +127,8 @@ defmodule Quiz.Round do
     |> send_question_to_players
   end
 
+  # When called on  a round with no more items in `questions` calls `finish_round/1` to
+  # kupdate the state/instructions to determines a winner.
   defp pop_question(%Round{questions: [] } = round) do
     round
     |> finish_round
@@ -114,12 +139,6 @@ defmodule Quiz.Round do
 
     round
     |> add_finish_notifications(results)
-  end
-
-  defp add_finish_notifications(round, info) do
-    round
-    |> notify_player(elem(info.winner, 0), { :finish, :won })
-    |> notify_player(elem(info.loser, 0), { :finish, :lost })
   end
 
   defp get_winner_loser(data) do
@@ -144,7 +163,13 @@ defmodule Quiz.Round do
     Enum.reduce(answers, acc, fn({user, answer}, acc) -> Map.update(acc, user, checker.(answer), fn(score) -> checker.(answer) + score end) end)
   end
 
-  def to_keyword_list(dict) do
+  defp add_finish_notifications(round, info) do
+    round
+    |> notify_player(elem(info.winner, 0), { :finish, :won })
+    |> notify_player(elem(info.loser, 0), { :finish, :lost })
+  end
+
+  defp to_keyword_list(dict) do
       Enum.map(dict, fn({key, value}) -> {key, value} end)
   end
 
@@ -171,11 +196,7 @@ defmodule Quiz.Round do
     %Round{ round|instructions: [instruction|round.instructions]}
   end
 
-  defp take_instructions(round) do
-    {Enum.reverse(round.instructions), %Round{round | instructions: []}}
-  end
-
-  def random_questions(_) do
+  defp random_questions(_) do
     [
       %Question{
         text: "Wo finden die Olympischen Winterspiele 2010 statt?",
